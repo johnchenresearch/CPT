@@ -80,8 +80,10 @@ def parse_args():
     parser.add_argument('--num_grad_bits_schedule', default=None, type=int, nargs='*',
                         help='schedule for grad precision')
 
-    parser.add_argument('--is_cyclic_precision', action='store_true',
-                        help='cyclic precision schedule')
+#     parser.add_argument('--is_cyclic_precision', action='store_true',
+#                         help='cyclic precision schedule')
+    parser.add_argument('--precision_schedule', default=None, action='store_true',
+                        help='precision schedule') # cyclic for CPT, linear, cosine, REX, EXP, OneCycle (precise to inprecise to precise)
     parser.add_argument('--cyclic_num_bits_schedule', default=None, type=int, nargs='*',
                         help='cyclic schedule for weight/act precision')
     parser.add_argument('--cyclic_num_grad_bits_schedule', default=None, type=int, nargs='*',
@@ -208,8 +210,9 @@ def run_training(args):
             model.train()
             adjust_learning_rate(args, optimizer, i)
 
-            cyclic_period = int(args.iters / args.num_cyclic_period)
-            cyclic_adjust_precision(args, i, cyclic_period)
+            #cyclic_period = int(args.iters / args.num_cyclic_period)
+            adjust_precision(args, i)
+            #cyclic_adjust_precision(args, i, cyclic_period)
 
             i += 1
 
@@ -404,7 +407,59 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+def adjust_precision(args, _iter, cyclic_period):
+    if not args.precision_schedule:
+        return
+    assert len(args.cyclic_num_bits_schedule) == 2
+    assert len(args.cyclic_num_grad_bits_schedule) == 2
 
+    num_bit_min = args.cyclic_num_bits_schedule[0]
+    num_bit_max = args.cyclic_num_bits_schedule[1]
+
+    num_grad_bit_min = args.cyclic_num_grad_bits_schedule[0]
+    num_grad_bit_max = args.cyclic_num_grad_bits_schedule[1]
+    
+    if args.precision_schedule == 'cyclic':
+        cyclic_period = int(args.iters / args.num_cyclic_period)
+
+        args.num_bits = np.rint(num_bit_min +
+                                0.5 * (num_bit_max - num_bit_min) *
+                                (1 + np.cos(np.pi * ((_iter % cyclic_period) / cyclic_period) + np.pi)))
+        args.num_grad_bits = np.rint(num_grad_bit_min +
+                                     0.5 * (num_grad_bit_max - num_grad_bit_min) *
+                                     (1 + np.cos(np.pi * ((_iter % cyclic_period) / cyclic_period) + np.pi)))
+
+        if _iter % args.eval_every == 0:
+            logging.info('Iter [{}] num_bits = {} num_grad_bits = {} cyclic precision'.format(_iter, args.num_bits,
+                                                                                                  args.num_grad_bits))
+    elif args.precision_schedule == 'linear': #linear, cosine, REX, EXP, OneCycle (precise to inprecise to precise)
+        ratio = _iter/args.iters
+        args.num_bits = np.rint(num_bit_min * (1-ratio) + num_bit_max * ratio)
+        args.num_grad_bits = np.rint(num_grad_bit_min * (1-ratio) + num_grad_bit_max * ratio)
+    elif args.precision_schedule == 'cosine':
+        ratio = _iter/args.iters
+        args.num_bits = np.rint(num_bit_min +
+                                0.5 * (num_bit_max - num_bit_min) *
+                                (1 + np.cos(np.pi * (1-ratio))))
+        args.num_grad_bits = np.rint(num_grad_bit_min +
+                                     0.5 * (num_grad_bit_max - num_grad_bit_min) *
+                                     (1 + np.cos(np.pi * (1-ratio))))
+    elif args.precision_schedule == 'REX':
+        ratio = _iter/args.iters
+        z = 1-ratio
+        args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (num_bit_max - num_bit_min) + (num_bit_max - num_bit_min) * z)))
+        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (num_grad_bit_max - num_grad_bit_min) + (num_grad_bit_max - num_grad_bit_min) * z))
+    elif args.precision_schedule == 'EXP':
+        args.num_bits = np.rint(num_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_bit_max - num_bit_min))
+        args.num_grad_bits = np.rint(num_gard_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_grad_bit_max - num_grad_bit_min))
+    elif args.precision_schedule == 'OneCycle':
+        if _iter < args.iters/2:
+            ratio = _iter/ (args.iters / 2)
+        else:
+            ratio = 1 - ((_iter - (args.iters/2)) / (args.iters / 2))
+        args.num_bits = np.rint(num_bit_min * (1-ratio) + num_bit_max * ratio)
+        args.num_grad_bits = np.rint(num_grad_bit_min * (1-ratio) + num_grad_bit_max * ratio)
+            
 def cyclic_adjust_precision(args, _iter, cyclic_period):
     if args.is_cyclic_precision:
         assert len(args.cyclic_num_bits_schedule) == 2
