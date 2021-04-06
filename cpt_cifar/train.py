@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument('--batch_size', default=128, type=int,
                         help='mini-batch size (default: 128)')
     parser.add_argument('--lr_schedule', default='piecewise', type=str,
-                        help='learning rate schedule')
+                        help='learning rate schedule') #piecewise, linear, REX
     parser.add_argument('--lr', default=0.1, type=float,
                         help='initial learning rate')
     parser.add_argument('--momentum', default=0.9, type=float,
@@ -499,13 +499,23 @@ def adjust_learning_rate(args, optimizer, _iter):
         lr_ratio = 0.01
         if args.warm_up and (_iter < 400):
             lr = 0.01
-        elif t < 0.5:
-            lr = args.lr
-        elif t < 0.9:
-            lr = args.lr * (1 - (1 - lr_ratio) * (t - 0.5) / 0.4)
         else:
-            lr = args.lr * lr_ratio
-
+            lr = args.lr * (1-t)
+#         elif t < 0.5:
+#             lr = args.lr
+#         elif t < 0.9:
+#             lr = args.lr * (1 - (1 - lr_ratio) * (t - 0.5) / 0.4)
+#         else:
+#             lr = args.lr * lr_ratio
+    elif args.lr_schedule == 'REX':
+        t = _iter / args.iters
+        z = 1-t
+                                     
+        if args.warm_up and (_iter < 400):
+            lr = 0.01
+        else:
+            lr = args.lr * (z / ( 1 - args.lr + args.lr * z))
+                                     
     elif args.lr_schedule == 'anneal_cosine':
         lr_min = args.lr * (args.step_ratio ** 2)
         lr_max = args.lr
