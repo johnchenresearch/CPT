@@ -407,7 +407,7 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def adjust_precision(args, _iter, cyclic_period):
+def adjust_precision(args, _iter):
     if not args.precision_schedule:
         return
     assert len(args.cyclic_num_bits_schedule) == 2
