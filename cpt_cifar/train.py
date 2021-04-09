@@ -447,8 +447,8 @@ def adjust_precision(args, _iter):
     elif args.precision_schedule == 'REX':
         ratio = _iter/args.iters
         z = 1-ratio
-        args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (num_bit_max - num_bit_min) + (num_bit_max - num_bit_min) * z))))
-        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (num_grad_bit_max - num_grad_bit_min) + (num_grad_bit_max - num_grad_bit_min) * z)))
+        args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (0.9) + (0.9) * z))))
+        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (0.9) + (0.9) * z)))
     elif args.precision_schedule == 'EXP':
         args.num_bits = np.rint(num_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_bit_max - num_bit_min))
         args.num_grad_bits = np.rint(num_gard_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_grad_bit_max - num_grad_bit_min))
@@ -514,7 +514,7 @@ def adjust_learning_rate(args, optimizer, _iter):
         if args.warm_up and (_iter < 400):
             lr = 0.01
         else:
-            lr = args.lr * (z / ( 1 - args.lr + args.lr * z))
+            lr = args.lr * (z / ( 1 - 0.9 + 0.9 * z))
                                      
     elif args.lr_schedule == 'anneal_cosine':
         lr_min = args.lr * (args.step_ratio ** 2)
