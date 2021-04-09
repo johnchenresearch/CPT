@@ -448,7 +448,7 @@ def adjust_precision(args, _iter, cyclic_period):
         ratio = _iter/args.iters
         z = 1-ratio
         args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (num_bit_max - num_bit_min) + (num_bit_max - num_bit_min) * z)))
-        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (num_grad_bit_max - num_grad_bit_min) + (num_grad_bit_max - num_grad_bit_min) * z))
+        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (num_grad_bit_max - num_grad_bit_min) + (num_grad_bit_max - num_grad_bit_min) * z)))
     elif args.precision_schedule == 'EXP':
         args.num_bits = np.rint(num_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_bit_max - num_bit_min))
         args.num_grad_bits = np.rint(num_gard_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_grad_bit_max - num_grad_bit_min))
