@@ -54,7 +54,7 @@ def parse_args():
                         help='momentum')
     parser.add_argument('--weight_decay', default=1e-4, type=float,
                         help='weight decay (default: 1e-4)')
-    parser.add_argument('--print_freq', default=10, type=int,
+    parser.add_argument('--print_freq', default=100, type=int,
                         help='print frequency (default: 10)')
     parser.add_argument('--resume', default='', type=str,
                         help='path to  latest checkpoint (default: None)')
@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument('--save_folder', default='save_checkpoints',
                         type=str,
                         help='folder to save the checkpoints')
-    parser.add_argument('--eval_every', default=390, type=int,
+    parser.add_argument('--eval_every', default=1000, type=int,
                         help='evaluate model every (default: 1000) iterations')
 
     parser.add_argument('--num_bits', default=0, type=int,
