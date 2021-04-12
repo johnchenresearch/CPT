@@ -83,7 +83,7 @@ def parse_args():
 #     parser.add_argument('--is_cyclic_precision', action='store_true',
 #                         help='cyclic precision schedule')
     parser.add_argument('--precision_schedule', default=None, type=str,
-                        help='precision schedule') # cyclic for CPT, linear, cosine, REX, EXP, OneCycle (precise to inprecise to precise)
+                        help='precision schedule') # cyclic for CPT, linear, cosine, REX9,REX7, REX5, EXP, OneCycle (precise to inprecise to precise)
     parser.add_argument('--cyclic_num_bits_schedule', default=None, type=int, nargs='*',
                         help='cyclic schedule for weight/act precision')
     parser.add_argument('--cyclic_num_grad_bits_schedule', default=None, type=int, nargs='*',
@@ -444,11 +444,21 @@ def adjust_precision(args, _iter):
         args.num_grad_bits = np.rint(num_grad_bit_min +
                                      0.5 * (num_grad_bit_max - num_grad_bit_min) *
                                      (1 + np.cos(np.pi * (1-ratio))))
-    elif args.precision_schedule == 'REX':
+    elif args.precision_schedule == 'REX9':
         ratio = _iter/args.iters
         z = 1-ratio
         args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (0.9) + (0.9) * z))))
         args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (0.9) + (0.9) * z)))
+    elif args.precision_schedule == 'REX7':
+        ratio = _iter/args.iters
+        z = 1-ratio
+        args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (0.7) + (0.7) * z))))
+        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (0.7) + (0.7) * z)))
+    elif args.precision_schedule == 'REX5':
+        ratio = _iter/args.iters
+        z = 1-ratio
+        args.num_bits = np.rint(num_bit_min + (num_bit_max - num_bit_min) * (1- (z / ( 1 - (0.5) + (0.5) * z))))
+        args.num_grad_bits = np.rint(num_grad_bit_min + (num_grad_bit_max - num_grad_bit_min) * (z / ( 1 - (0.5) + (0.5) * z)))
     elif args.precision_schedule == 'EXP':
         args.num_bits = np.rint(num_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_bit_max - num_bit_min))
         args.num_grad_bits = np.rint(num_gard_bit_min + (1-np.e**(-0.03* (100 / self.iters) * _iter)) * (num_grad_bit_max - num_grad_bit_min))
